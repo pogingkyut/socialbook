@@ -1,14 +1,34 @@
 from django.shortcuts import render, redirect
 from django.contrib.auth.models import User
 from django.contrib import messages
-from .models import Profile
+from .models import Profile, Post
 from django.contrib import auth
 from django.contrib.auth.decorators import login_required
 
 @login_required(login_url='signin')
 def index(request):
+
+    POSTS = []
+
     user_profile = Profile.objects.get(user=request.user)
-    return render(request, 'index.html', {'user_profile': user_profile})
+    posts = Post.objects.all()
+
+    for post in posts:
+        x = Profile.objects.get(user=post.user_id)
+        profileimg = x.profileimg
+        POSTS.append({
+            'user': post.user,
+            'image': post.image,
+            'caption': post.caption,
+            'profileimg': profileimg,
+        })
+    
+    context = {
+        'user_profile': user_profile,
+        'posts': posts,
+        'POSTS': POSTS,
+    }
+    return render(request, 'index.html', context)
 
 def signup(request):
     if request.method == "POST":
@@ -93,4 +113,14 @@ def settings(request):
 
 @login_required(login_url='signin')
 def upload(request):
-    return render(request, 'index.html', {})
+    if request.method=="POST":
+
+        image_upload = request.FILES.get('image_upload')
+        user = request.user.username
+        user_id = request.user.id
+        caption = request.POST['caption']
+
+        user_post = Post.objects.create(user=user, image=image_upload, caption=caption, user_id=user_id)
+        user_post.save()
+
+    return redirect('index')
